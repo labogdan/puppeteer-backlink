@@ -1,6 +1,16 @@
 const puppeteer = require('puppeteer');
 const fs = require("fs");
 
+const sports = [
+  'Soccer',
+  'Field Hockey',
+  'Hockey',
+  'Basketball',
+  'Baseball',
+  'Softball',
+  'Lacrosse',
+  'Football'
+]
 
 function wait(val) {
   return new Promise(resolve => setTimeout(resolve, val));
@@ -27,8 +37,7 @@ result.push(
 
 async function processUrl(url, page) {
   console.log(`processing ${url}`);
-  await page.waitForSelector('title');  
-  const title = await page.title();
+  await page.waitForSelector('title', {timeout: 5000});  
 
   let retVal = []
   let orgName = await page.title();
@@ -54,6 +63,7 @@ async function processUrl(url, page) {
       }
   
       function checkElement(element) {
+        let selectedSport = null;
         const sports = [
           'Soccer',
           'Field Hockey',
@@ -64,12 +74,11 @@ async function processUrl(url, page) {
           'Lacrosse',
           'Football'
         ]
-        let selectedSport = null;
         sports.map((sport) => {
           if (element.textContent.indexOf(sport) !== -1 ) {
             selectedSport = sport;
           }
-        })
+        });
         return selectedSport;
       }
 
@@ -84,8 +93,16 @@ async function processUrl(url, page) {
       }
 
     domTraversal(document.getElementById('NewsTable'), callback);
-    return obj;
-    })
+      return obj;
+    });
+
+    if (sport.length === 0) {
+      sports.map((sp) => {
+        if (orgName.indexOf(sp) !== -1 ) {
+          sport = sp;
+        }
+      });
+    }
 
   
   retVal.push([url, orgName, isSecure, sport]);
@@ -103,8 +120,7 @@ async function processUrl(url, page) {
   const browser = await puppeteer.launch({ headless: true });
   console.log('spawned browser');
 
-  //for (i in csvRecords[0]) {
-    for (i = 0; i < csvRecords[0].length; i++) {
+  for (i = 0; i < csvRecords[0].length; i++) {
     
     const page = await browser.newPage();
     console.log('spawned new page');
@@ -114,7 +130,7 @@ async function processUrl(url, page) {
     console.log(csvRecords[0][i][0]);
 
     try {
-      await page.goto(`http://${csvRecords[0][i][0]}`, {waitUntil: 'load', timeout: 5000});
+      await page.goto(`http://${csvRecords[0][i][0]}`, {waitUntil: 'domcontentloaded', timeout: 5000}); //{waitUntil: 'load', timeout: 5000});
       let res = await processUrl(csvRecords[0][i][0], page);
       result.push("\n");
       result.push(res[0]);
